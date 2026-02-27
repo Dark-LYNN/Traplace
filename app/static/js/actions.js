@@ -24,6 +24,7 @@ import {
   btnHome,
   btnTrap,
   btnCityTrapDist,
+  btnLoadCurrent,
 } from './dom.js';
 import { recomputePaint, renderUserTiles, centerToWorldCenter, centerToCell } from './render.js';
 import { validateAllObjects, createBlock } from './blocks.js';
@@ -59,6 +60,7 @@ export function setTitles() {
   if (btnExportPNG) btnExportPNG.title = `${t('ui.toolbar.export')} (${sc.export})`;
   if (btnImportPNG) btnImportPNG.title = `${t('ui.toolbar.import')} (${sc.import})`;
   if (btnCityTrapDist) btnCityTrapDist.title = `${t('ui.toolbar.dist2label')} (${sc.dist})`;
+  if (btnLoadCurrent) btnLoadCurrent.title = 'Load Current';
 }
 
 /**
@@ -235,6 +237,70 @@ function showUrlModal(url) {
 let currentHQIndex = -1;
 let currentTrapIndex = -1;
 
+/**
+ * Handle the core logic of importing a PNG file (extracting hash and restoring state).
+ * @param {File|Blob} file
+ */
+async function importPNGFile(file) {
+  try {
+    // Extract hash from PNG metadata
+    const hash = await importPNG(file);
+
+    // Deserialize state from hash
+    const parsed = deserializeState(hash);
+    const c = cellPx();
+
+    // Clear existing non-immutable blocks
+    rot.querySelectorAll('.block:not([data-immutable])').forEach((el) => el.remove());
+    state.blocks = state.blocks.filter((b) => b.immutable);
+    state.paintedSet.clear();
+    state.userPaint = new Set(parsed.red || []);
+    renderUserTiles();
+
+    // Restore blocks from parsed state
+    state._restoring = true;
+    for (const it of parsed.blocks) {
+      const left = it.cx * c;
+      const top = it.cy * c;
+
+      const el = createBlock(
+        it.kind,
+        it.size,
+        left,
+        top,
+        it.width,
+        it.height,
+        false,
+        null,
+        it.fontSize,
+        it.wordWrap,
+      );
+      if (it.label) {
+        const lbl = el.querySelector('.label');
+        if (lbl) lbl.textContent = it.label;
+      }
+
+      makeMovable(el);
+    }
+    state._restoring = false;
+
+    // Recompute and validate
+    recomputePaint();
+    validateAllObjects();
+    updateAllCounts();
+
+    // Update URL with imported state
+    updateURLWithSerialized(hash);
+
+    // Save to history
+    saveCheckpoint();
+  } catch (error) {
+    console.error('PNG import error:', error);
+    alert(error.message || t('alert.importFail') || 'Failed to import PNG');
+    throw error;
+  }
+}
+
 export function setupActions() {
   setTitles();
 
@@ -399,65 +465,26 @@ export function setupActions() {
     pngFileInput?.click();
   });
 
+  // Load Current Image (Import from /static/img/current.png)
+  btnLoadCurrent?.addEventListener('click', async () => {
+    try {
+      const res = await fetch('/static/img/current.png');
+      if (!res.ok) throw new Error('current.png not found');
+      const blob = await res.blob();
+      const file = new File([blob], 'current.png', { type: 'image/png' });
+      await importPNGFile(file);
+    } catch (err) {
+      console.error('Failed to load current.png:', err);
+      alert(t('alert.importFail') || 'Failed to load current image');
+    }
+  });
+
   pngFileInput?.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      // Extract hash from PNG metadata
-      const hash = await importPNG(file);
-
-      // Deserialize state from hash
-      const parsed = deserializeState(hash);
-      const c = cellPx();
-
-      // Clear existing non-immutable blocks
-      rot.querySelectorAll('.block:not([data-immutable])').forEach((el) => el.remove());
-      state.blocks = state.blocks.filter((b) => b.immutable);
-      state.paintedSet.clear();
-      state.userPaint = new Set(parsed.red || []);
-      renderUserTiles();
-
-      // Restore blocks from parsed state
-      state._restoring = true;
-      for (const it of parsed.blocks) {
-        const left = it.cx * c;
-        const top = it.cy * c;
-
-        const el = createBlock(
-          it.kind,
-          it.size,
-          left,
-          top,
-          it.width,
-          it.height,
-          false,
-          null,
-          it.fontSize,
-          it.wordWrap,
-        );
-        if (it.label) {
-          const lbl = el.querySelector('.label');
-          if (lbl) lbl.textContent = it.label;
-        }
-
-        makeMovable(el);
-      }
-      state._restoring = false;
-
-      // Recompute and validate
-      recomputePaint();
-      validateAllObjects();
-      updateAllCounts();
-
-      // Update URL with imported state
-      updateURLWithSerialized(hash);
-
-      // Save to history
-      saveCheckpoint();
-    } catch (error) {
-      console.error('PNG import error:', error);
-      alert(error.message || t('alert.importFail') || 'Failed to import PNG');
+      await importPNGFile(file);
     } finally {
       // Reset file input to allow re-importing the same file
       pngFileInput.value = '';

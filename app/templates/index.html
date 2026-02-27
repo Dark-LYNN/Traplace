@@ -168,8 +168,8 @@
       </div>
 
       <div class="sidebar-footer">
-        <!-- QR 코드 2개 -->
-        <div class="footer-qrs">
+        <!-- QR 코드 2개 (compact) -->
+        <div class="footer-qrs compact">
           <div class="qr-item">
             <a
               class="qr-link"
@@ -179,12 +179,11 @@
               title="Buy me a coffee"
             >
               <img
-                class="qr-img"
+                class="qr-img mini"
                 src="{{ url_for('static', filename='img/qr-code-bmc.png') }}"
                 alt="Buy me a coffee QR"
               />
             </a>
-            <span class="qr-label">Buy me a coffee</span>
           </div>
 
           <div class="qr-item">
@@ -196,31 +195,28 @@
               title="토스 송금"
             >
               <img
-                class="qr-img"
+                class="qr-img mini"
                 src="{{ url_for('static', filename='img/qr-code-toss.jpg') }}"
                 alt="Toss QR"
               />
             </a>
-            <span class="qr-label">Toss</span>
           </div>
         </div>
 
         <!-- GitHub + 크레딧 -->
         <div class="footer-info">
-          <a
-            class="github-link"
-            href="https://github.com/SangwoonYun/Traplace"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Traplace GitHub"
-          >
-            <img
-              class="github-icon"
-              src="{{ url_for('static', filename='img/github-mark.svg') }}"
-              alt="GitHub"
-            />
-          </a>
-          <span class="credit">Created by #159 [TCA] 방구석개발자</span>
+          <span class="credit">
+            <a href="https://github.com/SangwoonYun/Traplace" target="_blank" rel="noopener noreferrer" class="github-link-mini">
+              <img class="github-icon-mini" src="{{ url_for('static', filename='img/github-mark.svg') }}" alt="GitHub" />
+            </a>
+            Created by <span style="color: rgb(156, 255, 255);">#159 [TCA] 방구석개발자</span>
+          </span>
+          <span class="credit">
+            <a href="https://github.com/lynnux-useless-codes" target="_blank" rel="noopener noreferrer" class="github-link-mini">
+              <img class="github-icon-mini" src="{{ url_for('static', filename='img/github-mark.svg') }}" alt="GitHub" />
+            </a>
+            Modified by <span style="color: #ffb8ff;">#330 [CGD] Lynnux</span>
+          </span>
         </div>
 
         <!-- Legal Links -->
@@ -312,6 +308,15 @@
           aria-label="Import PNG"
         >
           📥
+        </button>
+        <button
+          id="btnLoadCurrent"
+          class="tb-btn primary"
+          type="button"
+          title="Load Current"
+          aria-label="Load Current"
+        >
+          🔄
         </button>
         <input
           id="pngFileInput"
